@@ -31,3 +31,140 @@ body {
     text-wrap: balance;
   }
 }
+/* Search Bar Styling */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+
+.controls label {
+  font-size: 1em;
+  color: #333;
+}
+
+.controls select,
+.controls input {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #fff;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.controls select:focus,
+.controls input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.25);
+}
+
+.controls input::placeholder {
+  color: #aaa;
+}
+
+/* Pagination Controls Styling */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.pagination-controls button {
+  padding: 8px 16px;
+  margin: 0 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.pagination-controls button:hover {
+  background-color: #e0e0e0;
+}
+
+.pagination-controls button:disabled {
+  background-color: #e0e0e0;
+  cursor: not-allowed;
+}
+
+.pagination-controls span {
+  margin: 0 8px;
+  font-size: 1em;
+  color: #333;
+}
+
+/* User Comments Styling */
+.user-comments {
+  margin-top: 20px;
+}
+
+.comment {
+  background: #fff;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 10px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.comment:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+.user-profile {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+  background: #f9f9f9;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.user-profile h1 {
+  font-size: 2em;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.user-profile h2 {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+}
+
+.favorite-characters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+}
+
+.character-card {
+  width: 150px;
+  text-align: center;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: #fff;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.character-card img {
+  width: 100%;
+  height: auto;
+}
+
+.character-card h3 {
+  margin: 10px 0;
+  font-size: 1em;
+  color: #333;
+}
+
+.character-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
