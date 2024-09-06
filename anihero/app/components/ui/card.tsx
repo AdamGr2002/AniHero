@@ -19,8 +19,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({ character }) => {
       <div className="card-content">
         <h3 className="card-title">{character.name}</h3>
         <p className="card-description">{character.description}</p>
-        <Link href={`/character/${character.id}`}>
-          <a className="card-link">View Details</a>
+        <Link href={`/character/${character.id}`}className="card-link">View Details
         </Link>
       </div>
     </div>

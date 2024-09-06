@@ -1,27 +1,17 @@
-import axios from 'axios';
+import { NextResponse } from 'next/server'
 
-const BASE_URL = 'https://api.jikan.moe/v4';
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const apiParams = new URLSearchParams(searchParams)
+  
+  const url = `https://api.jikan.moe/v4/characters?${apiParams.toString()}`
 
-export const fetchAnimeCharacters = async (animeId: number, page: number = 1, limit: number = 10, sort: string = 'name', filter: string = '') => {
-  const response = await axios.get(`${BASE_URL}/anime/${animeId}/characters`, {
-    params: {
-      page,
-      limit,
-    },
-  });
-  let characters = response.data.data;
-
-  if (sort === 'name') {
-    characters.sort((a: any, b: any) => a.character.name.localeCompare(b.character.name));
-  } else if (sort === 'popularity') {
-    characters.sort((a: any, b: any) => b.popularity - a.popularity);
+  try {
+    const response = await fetch(url)
+    const data = await response.json()
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error('Error fetching data:', error)
+    return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 })
   }
-
-  if (filter) {
-    characters = characters.filter((character: any) =>
-      character.character.name.toLowerCase().includes(filter.toLowerCase())
-    );
-  }
-
-  return characters;
-};
+}

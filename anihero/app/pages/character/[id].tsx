@@ -1,6 +1,6 @@
 import React from 'react';
-import { GetServerSideProps } from 'next';
-import axios from 'axios';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 
 interface CharacterDetailsProps {
   character: {
@@ -13,33 +13,25 @@ interface CharacterDetailsProps {
 }
 
 const CharacterDetails: React.FC<CharacterDetailsProps> = ({ character }) => {
-  return (
-    <div className="character-details">
-      <img src={character.image_url} alt={character.name} />
-      <h1>{character.name}</h1>
-      <p>{character.description}</p>
-      <h2>Abilities</h2>
-      <ul>
-        {character.abilities.map((ability, index) => (
-          <li key={index}>{ability}</li>
-        ))}
-      </ul>
-      <h2>Anime</h2>
-      <p>{character.anime}</p>
-    </div>
-  );
-};
-
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  const { id } = context.params!;
-  const response = await axios.get(`https://api.jikan.moe/v4/characters/${id}`);
-  const character = response.data.data;
-
-  return {
-    props: {
-      character,
-    },
-  };
+return (
+    <Card className="character-details">
+        <CardHeader>
+            <img src={character.image_url} alt={character.name} className="character-image" />
+            <CardTitle>{character.name}</CardTitle>
+        </CardHeader>
+        <CardContent>
+            <p className="character-description">{character.description}</p>
+            <h2 className="section-title">Abilities</h2>
+            <ul className="abilities-list">
+                {character.abilities.map((ability, index) => (
+                    <li key={index} className="ability-item">{ability}</li>
+                ))}
+            </ul>
+            <h2 className="section-title">Anime</h2>
+            <p className="character-anime">{character.anime}</p>
+        </CardContent>
+    </Card>
+);
 };
 
 export default CharacterDetails;
