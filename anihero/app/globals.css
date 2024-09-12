@@ -82,6 +82,13 @@ html, body {
   padding: 0;
 }
 
+body {
+  background-image: url('../public/anime-style-galaxy-background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
 #__next {
   height: 100%;
 }
@@ -92,6 +99,8 @@ html, body {
   margin-right: auto;
   padding-left: 1rem;
   padding-right: 1rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 @media (min-width: 640px) {
@@ -127,4 +136,33 @@ h1, h2, h3, h4, h5, h6, p, span, div {
 main {
   padding-top: 2rem;
   padding-bottom: 2rem;
+}
+
+/* Anime-style enhancements */
+.card {
+  backdrop-filter: blur(10px);
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.badge {
+  font-family: 'Anime Ace', sans-serif;
+}
+
+@font-face {
+  font-family: 'Anime Ace';
+  src: url('/fonts/animeace2_reg.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+h1 {
+  font-family: 'Anime Ace', sans-serif;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }

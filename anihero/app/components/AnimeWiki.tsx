@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from 'react'
+import { useUser, SignInButton, UserButton } from "@clerk/nextjs"
 import axios from 'axios'
 import anime from 'animejs'
 import { Input } from "@/components/ui/input"
@@ -8,8 +9,17 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CharacterModal } from './CharacterModal'
+import CharacterOfTheDay from './CharacterOfTheDay'
+import CharacterQuotes from './CharacterQuotes'
+import { Heart } from 'lucide-react'
+import Link from 'next/link'
+
+interface Quote {
+  quote: string
+  context?: string
+}
 
 interface AnimeCharacter {
   mal_id: number
@@ -37,9 +47,11 @@ interface AnimeCharacter {
     }
     language: string
   }[]
+  quotes: Quote[]
 }
 
 export default function AnimeWiki() {
+  const { isSignedIn, user } = useUser()
   const [characters, setCharacters] = useState<AnimeCharacter[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
@@ -50,6 +62,7 @@ export default function AnimeWiki() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [sortBy, setSortBy] = useState("favorites")
   const [sortOrder, setSortOrder] = useState("desc")
+  const [favorites, setFavorites] = useState<number[]>([])
   const charactersRef = useRef<HTMLDivElement>(null)
 
   const fetchCharacters = async (page: number, query: string = "") => {
@@ -91,6 +104,16 @@ export default function AnimeWiki() {
     }
   }, [characters, isLoading])
 
+  useEffect(() => {
+    if (isSignedIn && user) {
+      const storedFavorites = localStorage.getItem(`favorites_${user.id}`)
+      if (storedFavorites) {
+        const favoritesData = JSON.parse(storedFavorites)
+        setFavorites(favoritesData.map((char: AnimeCharacter) => char.mal_id))
+      }
+    }
+  }, [isSignedIn, user])
+
   const handleSearch = () => {
     setCurrentPage(1)
     fetchCharacters(1, searchTerm)
@@ -113,9 +136,50 @@ export default function AnimeWiki() {
     setCurrentPage(1)
   }
 
+  const toggleFavorite = (character: AnimeCharacter) => {
+    if (!isSignedIn || !user) {
+      // Prompt user to sign in
+      return
+    }
+    const storedFavorites = localStorage.getItem(`favorites_${user.id}`)
+    let favoritesData = storedFavorites ? JSON.parse(storedFavorites) : []
+    
+    if (favorites.includes(character.mal_id)) {
+      favoritesData = favoritesData.filter((char: AnimeCharacter) => char.mal_id !== character.mal_id)
+      setFavorites(favorites.filter(id => id !== character.mal_id))
+    } else {
+      favoritesData.push(character)
+      setFavorites([...favorites, character.mal_id])
+    }
+    
+    localStorage.setItem(`favorites_${user.id}`, JSON.stringify(favoritesData))
+  }
+
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6 text-center">Anime Character Wiki</h1>
+    <div className="container mx-auto p-4 bg-white bg-opacity-90 rounded-lg shadow-lg">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-4xl font-bold text-primary">Anime Character Wiki</h1>
+        <div className="flex items-center gap-4">
+          {isSignedIn ? (
+            <>
+              <Link href="/favorites">
+                <Button variant="outline">My Favorites</Button>
+              </Link>
+              <Link href="/compare">
+                <Button variant="outline">Compare Characters</Button>
+              </Link>
+              <UserButton afterSignOutUrl="/" />
+            </>
+          ) : (
+            <SignInButton mode="modal">
+              <Button>Sign In</Button>
+            </SignInButton>
+          )}
+        </div>
+      </div>
+      <p className="text-xl text-muted-foreground mb-8">Explore your favorite anime characters</p>
+      
+      <CharacterOfTheDay />
       
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-center items-center">
         <Input
@@ -147,18 +211,29 @@ export default function AnimeWiki() {
           <Card 
             key={char.mal_id} 
             className="flex flex-col hover:shadow-lg transition-shadow duration-300 cursor-pointer"
-            onClick={() => handleCharacterClick(char)}
           >
             <CardHeader>
-              <div className="flex items-center gap-4">
-                <img src={char.images?.jpg?.image_url || '/placeholder.svg?height=64&width=64'} alt={char.name} className="w-16 h-16 rounded-full object-cover" />
-                <div>
-                  <CardTitle className="text-lg">{char.name}</CardTitle>
-                  <CardDescription>{char.name_kanji}</CardDescription>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <img src={char.images?.jpg?.image_url || '/placeholder.svg?height=64&width=64'} alt={char.name} className="w-16 h-16 rounded-full object-cover" />
+                  <div>
+                    <CardTitle className="text-lg">{char.name}</CardTitle>
+                    <CardDescription>{char.name_kanji}</CardDescription>
+                  </div>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleFavorite(char)
+                  }}
+                >
+                  <Heart className={`h-4 w-4 ${favorites.includes(char.mal_id) ? 'fill-red-500 text-red-500' : ''}`} />
+                </Button>
               </div>
             </CardHeader>
-            <CardContent className="flex-grow">
+            <CardContent className="flex-grow" onClick={() => handleCharacterClick(char)}>
               <div className="mb-2">
                 <Badge variant="secondary" className="mr-2">Favorites: {char.favorites || 0}</Badge>
                 {char.nicknames && char.nicknames.length > 0 && (
@@ -189,6 +264,9 @@ export default function AnimeWiki() {
                   </Badge>
                 ))}
               </div>
+              {char.quotes && char.quotes.length > 0 && (
+                <CharacterQuotes name={char.name} quotes={char.quotes} />
+              )}
             </CardContent>
           </Card>
         ))}
