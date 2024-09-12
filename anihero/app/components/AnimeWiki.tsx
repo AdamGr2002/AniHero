@@ -168,7 +168,7 @@ export default function AnimeWiki() {
               <Link href="/compare">
                 <Button variant="outline">Compare Characters</Button>
               </Link>
-              <UserButton afterSignOutUrl="/" />
+              <UserButton />
             </>
           ) : (
             <SignInButton mode="modal">
