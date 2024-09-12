@@ -1,11 +1,12 @@
 import './globals.css'
+import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata = {
-  title: 'Anime Character Wiki',
+export const metadata: Metadata = {
+  title: 'AniHero',
   description: 'Explore your favorite anime characters',
 }
 
