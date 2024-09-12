@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CharacterModal } from './CharacterModal'
-import CharacterOfTheDay from './CharacterOfTheDay'
+import {CharacterOfTheDay} from './CharacterOfTheDay'
 import CharacterQuotes from './CharacterQuotes'
 import { Heart } from 'lucide-react'
 import Link from 'next/link'
@@ -167,6 +167,9 @@ export default function AnimeWiki() {
               </Link>
               <Link href="/compare">
                 <Button variant="outline">Compare Characters</Button>
+              </Link>
+              <Link href="/quiz">
+                <Button variant="outline">Take Quiz</Button>
               </Link>
               <UserButton afterSignOutUrl="/" />
             </>

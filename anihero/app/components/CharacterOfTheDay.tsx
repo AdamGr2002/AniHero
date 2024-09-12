@@ -1,155 +1,146 @@
-/* eslint-disable react/no-unescaped-entities */
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 
-interface AnimeCharacter {
+interface Character {
   mal_id: number
   name: string
-  about: string
+  name_kanji: string
   images: {
     jpg: {
       image_url: string
     }
   }
+  about: string
   anime: {
     title: string
+    role: string
   }[]
-  quotes?: {
-    quote: string
-    anime: string
-  }[]
+  quotes: string[]
 }
 
-const fallbackCharacters: AnimeCharacter[] = [
-  {
-    mal_id: 1,
-    name: "Monkey D. Luffy",
-    about: "The main protagonist of One Piece and captain of the Straw Hat Pirates.",
-    images: { jpg: { image_url: "https://cdn.myanimelist.net/images/characters/9/310307.jpg" } },
-    anime: [{ title: "One Piece" }],
-    quotes: [{ quote: "I'm gonna be the Pirate King!", anime: "One Piece" }]
-  },
-  {
-    mal_id: 2,
-    name: "Naruto Uzumaki",
-    about: "The main protagonist of the Naruto series and the Seventh Hokage of Konohagakure.",
-    images: { jpg: { image_url: "https://cdn.myanimelist.net/images/characters/2/284121.jpg" } },
-    anime: [{ title: "Naruto" }],
-    quotes: [{ quote: "I'm going to be Hokage!", anime: "Naruto" }]
-  },
-  {
-    mal_id: 3,
-    name: "Goku",
-    about: "The main protagonist of the Dragon Ball series, known for his incredible strength and kind heart.",
-    images: { jpg: { image_url: "https://cdn.myanimelist.net/images/characters/15/72546.jpg" } },
-    anime: [{ title: "Dragon Ball" }],
-    quotes: [{ quote: "I am the hope of the universe. I am the answer to all living things that cry out for peace.", anime: "Dragon Ball Z" }]
-  }
-]
+export function CharacterOfTheDay() {
+  const [character, setCharacter] = useState<Character | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0)
 
-export default function CharacterOfTheDay() {
-  const [character, setCharacter] = useState<AnimeCharacter | null>(null)
-  const [quoteOfTheDay, setQuoteOfTheDay] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const fetchCharacterOfTheDay = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await axios.get('/api/anime', {
+        params: {
+          page: Math.floor(Math.random() * 10) + 1, // Random page between 1 and 10
+          limit: 1,
+          order_by: 'favorites',
+          sort: 'desc'
+        }
+      })
+      if (response.data.data && response.data.data.length > 0) {
+        const fetchedCharacter = response.data.data[0]
+        // Fetch quotes for the character
+        const quotesResponse = await axios.get(`/api/quotes/${fetchedCharacter.mal_id}`)
+        fetchedCharacter.quotes = quotesResponse.data.quotes || []
+        setCharacter(fetchedCharacter)
+        setCurrentQuoteIndex(0)
+      } else {
+        throw new Error("No character data received")
+      }
+    } catch (error) {
+      console.error('Failed to fetch character of the day:', error)
+      setError("Failed to fetch the character of the day. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchRandomCharacter = async () => {
-      setIsLoading(true)
-      try {
-        const response = await axios.get('/api/anime/characters/random')
-        let selectedCharacter = response.data.data
-
-        if (!selectedCharacter) {
-          selectedCharacter = fallbackCharacters[Math.floor(Math.random() * fallbackCharacters.length)]
-        }
-
-        setCharacter(selectedCharacter)
-
-        // Fetch quotes for the character
-        if (selectedCharacter.mal_id) {
-          const quotesResponse = await axios.get(`/api/anime/characters/${selectedCharacter.mal_id}/quotes`)
-          const quotes = quotesResponse.data.data
-          if (quotes && quotes.length > 0) {
-            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)]
-            setQuoteOfTheDay(randomQuote.quote)
-          } else if (selectedCharacter.quotes && selectedCharacter.quotes.length > 0) {
-            setQuoteOfTheDay(selectedCharacter.quotes[0].quote)
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch random character:', error)
-        const fallbackCharacter = fallbackCharacters[Math.floor(Math.random() * fallbackCharacters.length)]
-        setCharacter(fallbackCharacter)
-        if (fallbackCharacter.quotes && fallbackCharacter.quotes.length > 0) {
-          setQuoteOfTheDay(fallbackCharacter.quotes[0].quote)
-        }
-      }
-      setIsLoading(false)
-    }
-
-    fetchRandomCharacter()
+    fetchCharacterOfTheDay()
   }, [])
 
-  if (isLoading) {
+  const cycleQuote = () => {
+    if (character && character.quotes.length > 0) {
+      setCurrentQuoteIndex((prevIndex) => (prevIndex + 1) % character.quotes.length)
+    }
+  }
+
+  if (error) {
     return (
-      <Card className="mb-8">
+      <Card className="w-full max-w-md mx-auto">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-primary">Character of the Day</CardTitle>
+          <CardTitle>Error</CardTitle>
+          <CardDescription>Failed to load character of the day</CardDescription>
         </CardHeader>
-        <CardContent className="flex items-center space-x-4">
-          <Skeleton className="w-24 h-36 rounded-md" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-[250px]" />
-            <Skeleton className="h-4 w-[200px]" />
-            <Skeleton className="h-4 w-[150px]" />
-          </div>
+        <CardContent>
+          <p className="text-red-500">{error}</p>
         </CardContent>
+        <CardFooter>
+          <Button onClick={fetchCharacterOfTheDay}>Try Again</Button>
+        </CardFooter>
       </Card>
     )
   }
 
-  if (!character) {
-    return null
-  }
-
   return (
-    <Card className="mb-8">
+    <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-primary">Character of the Day</CardTitle>
+        <CardTitle>Character of the Day</CardTitle>
+        <CardDescription>Discover a new character every day!</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-4">
-        <img 
-          src={character.images?.jpg?.image_url || '/placeholder.svg?height=150&width=100'} 
-          alt={character.name} 
-          className="w-24 h-36 object-cover rounded-md"
-        />
-        <div className="flex-1">
-          <h3 className="text-xl font-semibold mb-2">{character.name}</h3>
-          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{character.about || 'No description available.'}</p>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {character.anime && character.anime.length > 0 ? (
-              character.anime.slice(0, 3).map((anime, index) => (
-                <Badge key={index} variant="secondary">
-                  {anime.title}
-                </Badge>
-              ))
-            ) : (
-              <Badge variant="secondary">No anime information available</Badge>
+      <CardContent className="space-y-4">
+        {loading || !character ? (
+          <>
+            <Skeleton className="w-full h-64 rounded-lg" />
+            <Skeleton className="w-3/4 h-4" />
+            <Skeleton className="w-1/2 h-4" />
+            <Skeleton className="w-full h-24" />
+          </>
+        ) : (
+          <>
+            <img
+              src={character.images.jpg.image_url}
+              alt={character.name}
+              className="w-full h-64 object-cover rounded-lg"
+            />
+            <h2 className="text-2xl font-bold">{character.name}</h2>
+            {character.name_kanji && (
+              <p className="text-lg text-gray-600">{character.name_kanji}</p>
             )}
-          </div>
-          {quoteOfTheDay && (
-            <div className="mt-4">
-              <h4 className="text-lg font-semibold mb-2">Quote of the Day</h4>
-              <blockquote className="italic text-sm text-muted-foreground">"{quoteOfTheDay}"</blockquote>
-            </div>
-          )}
-        </div>
+            <p className="text-sm line-clamp-4">{character.about}</p>
+            {character.anime.length > 0 && (
+              <div>
+                <h3 className="font-semibold">Appears in:</h3>
+                <ul className="list-disc list-inside">
+                  {character.anime.slice(0, 3).map((anime, index) => (
+                    <li key={index}>
+                      {anime.title} ({anime.role})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {character.quotes.length > 0 && (
+              <div className="mt-4">
+                <h3 className="font-semibold">Quote:</h3>
+                <p className="italic">"{character.quotes[currentQuoteIndex]}"</p>
+                <Button onClick={cycleQuote} variant="outline" className="mt-2">
+                  Next Quote
+                </Button>
+              </div>
+            )}
+          </>
+        )}
       </CardContent>
+      <CardFooter>
+        <Button onClick={fetchCharacterOfTheDay} disabled={loading}>
+          {loading ? 'Loading...' : 'Get New Character of the Day'}
+        </Button>
+      </CardFooter>
     </Card>
   )
 }
