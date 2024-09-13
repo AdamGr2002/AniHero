@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import axios from 'axios'
-
+import { jikanRateLimiter } from '@/app/utils/rateLimiter'
 const JIKAN_API_BASE_URL = 'https://api.jikan.moe/v4'
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes in milliseconds
 const REQUEST_DELAY = 1000 // 1 second delay between requests
@@ -9,8 +9,6 @@ const MAX_LIMIT = 25 // Maximum limit allowed by Jikan API
 const cache = new Map<string, { data: any; timestamp: number }>()
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
-
-let lastRequestTime = 0
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -30,33 +28,51 @@ export async function GET(request: Request) {
 
   console.log('Fetching characters with params:', { page, limit, q, orderBy, sort })
 
-  const now = Date.now()
-  if (now - lastRequestTime < REQUEST_DELAY) {
-    const waitTime = REQUEST_DELAY - (now - lastRequestTime)
-    console.log(`Waiting for ${waitTime}ms before making the request`)
-    await delay(waitTime)
-  }
-
   try {
-    const characters = await fetchAllCharacters(page, limit, q, orderBy, sort)
+    const result = await jikanRateLimiter.enqueue(async () => {
+      const response = await axios.get(`${JIKAN_API_BASE_URL}/characters`, {
+        params: {
+          page,
+          limit,
+          q,
+          order_by: orderBy,
+          sort,
+        },
+      })
 
-    const result = {
-      data: characters,
-      pagination: {
-        current_page: parseInt(page),
-        has_next_page: characters.length === limit,
-      },
-    }
+      if (!response.data.data || !Array.isArray(response.data.data)) {
+        throw new Error('Invalid response format from Jikan API')
+      }
+
+      const characters = response.data.data.map((char: any) => ({
+        mal_id: char.mal_id,
+        name: char.name,
+        name_kanji: char.name_kanji,
+        images: char.images,
+        anime: (char.anime || []).map((a: any) => ({
+          title: a.anime?.title || 'Unknown Anime',
+          role: a.role || 'Unknown Role',
+        })),
+      }))
+
+      return {
+        data: characters,
+        pagination: response.data.pagination,
+      }
+    })
 
     cache.set(cacheKey, { data: result, timestamp: Date.now() })
-
-    lastRequestTime = Date.now()
 
     return NextResponse.json(result)
   } catch (error) {
     console.error('Error fetching characters:', error)
     if (axios.isAxiosError(error)) {
-      console.error('Axios error details:', error.response?.data)
+      if (error.response?.status === 429) {
+        return NextResponse.json(
+          { error: 'Rate limit exceeded. Please try again later.' },
+          { status: 429 }
+        )
+      }
       return NextResponse.json(
         { error: `Failed to fetch characters: ${error.message}` },
         { status: error.response?.status || 500 }

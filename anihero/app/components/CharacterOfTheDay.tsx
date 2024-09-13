@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 "use client"
 
 import { useState, useEffect } from 'react'
@@ -20,22 +21,33 @@ interface Character {
     title: string
     role: string
   }[]
-  quotes: string[]
 }
 
 export function CharacterOfTheDay() {
   const [character, setCharacter] = useState<Character | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0)
 
   const fetchCharacterOfTheDay = async () => {
     setLoading(true)
     setError(null)
+
+    const today = new Date().toISOString().split('T')[0]
+    const cachedCharacter = localStorage.getItem(`characterOfTheDay-${today}`)
+
+    if (cachedCharacter) {
+      setCharacter(JSON.parse(cachedCharacter))
+      setLoading(false)
+      return
+    }
+
     try {
+      const seed = parseInt(today.replace(/-/g, ''))
+      const randomPage = (seed % 10) + 1 // Generate a consistent random page for the day
+
       const response = await axios.get('/api/anime', {
         params: {
-          page: Math.floor(Math.random() * 10) + 1, // Random page between 1 and 10
+          page: randomPage,
           limit: 1,
           order_by: 'favorites',
           sort: 'desc'
@@ -43,17 +55,18 @@ export function CharacterOfTheDay() {
       })
       if (response.data.data && response.data.data.length > 0) {
         const fetchedCharacter = response.data.data[0]
-        // Fetch quotes for the character
-        const quotesResponse = await axios.get(`/api/quotes/${fetchedCharacter.mal_id}`)
-        fetchedCharacter.quotes = quotesResponse.data.quotes || []
         setCharacter(fetchedCharacter)
-        setCurrentQuoteIndex(0)
+        localStorage.setItem(`characterOfTheDay-${today}`, JSON.stringify(fetchedCharacter))
       } else {
         throw new Error("No character data received")
       }
     } catch (error) {
       console.error('Failed to fetch character of the day:', error)
-      setError("Failed to fetch the character of the day. Please try again.")
+      if (axios.isAxiosError(error) && error.response?.status === 429) {
+        setError("Rate limit exceeded. Please try again in a few moments.")
+      } else {
+        setError("Failed to fetch the character of the day. Please try again.")
+      }
     } finally {
       setLoading(false)
     }
@@ -61,13 +74,17 @@ export function CharacterOfTheDay() {
 
   useEffect(() => {
     fetchCharacterOfTheDay()
-  }, [])
 
-  const cycleQuote = () => {
-    if (character && character.quotes.length > 0) {
-      setCurrentQuoteIndex((prevIndex) => (prevIndex + 1) % character.quotes.length)
-    }
-  }
+    // Set up a timer to check for day change
+    const timer = setInterval(() => {
+      const now = new Date()
+      if (now.getHours() === 0 && now.getMinutes() === 0) {
+        fetchCharacterOfTheDay()
+      }
+    }, 60000) // Check every minute
+
+    return () => clearInterval(timer)
+  }, [])
 
   if (error) {
     return (
@@ -90,7 +107,7 @@ export function CharacterOfTheDay() {
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
         <CardTitle>Character of the Day</CardTitle>
-        <CardDescription>Discover a new character every day!</CardDescription>
+        <CardDescription>Today's featured character!</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading || !character ? (
@@ -124,21 +141,12 @@ export function CharacterOfTheDay() {
                 </ul>
               </div>
             )}
-            {character.quotes.length > 0 && (
-              <div className="mt-4">
-                <h3 className="font-semibold">Quote:</h3>
-                <p className="italic">"{character.quotes[currentQuoteIndex]}"</p>
-                <Button onClick={cycleQuote} variant="outline" className="mt-2">
-                  Next Quote
-                </Button>
-              </div>
-            )}
           </>
         )}
       </CardContent>
       <CardFooter>
         <Button onClick={fetchCharacterOfTheDay} disabled={loading}>
-          {loading ? 'Loading...' : 'Get New Character of the Day'}
+          Refresh
         </Button>
       </CardFooter>
     </Card>
