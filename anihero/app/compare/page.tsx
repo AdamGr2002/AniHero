@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import axios from 'axios'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,7 +21,7 @@ interface Character {
     }
   }
   about: string
-  favorites: number
+  favorites: number | undefined
   anime: {
     title: string
     role: string
@@ -140,8 +140,14 @@ export default function CharacterComparison() {
           </div>
           <div>
             <h3 className="font-semibold mb-2">Popularity</h3>
-            <Progress value={character.favorites} max={100000} className="w-full" />
-            <p className="text-sm mt-1">{character.favorites.toLocaleString()} favorites</p>
+            {character.favorites !== undefined ? (
+              <>
+                <Progress value={character.favorites} max={100000} className="w-full" />
+                <p className="text-sm mt-1">{character.favorites.toLocaleString()} favorites</p>
+              </>
+            ) : (
+              <p className="text-sm">Popularity data not available</p>
+            )}
           </div>
           <Tabs defaultValue="anime" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
@@ -150,31 +156,43 @@ export default function CharacterComparison() {
               <TabsTrigger value="voices">Voice Actors</TabsTrigger>
             </TabsList>
             <TabsContent value="anime">
-              <ul className="list-disc list-inside">
-                {character.anime.slice(0, 5).map((anime, index) => (
-                  <li key={index} className="text-sm">
-                    {anime.title} ({anime.role})
-                  </li>
-                ))}
-              </ul>
+              {character.anime.length > 0 ? (
+                <ul className="list-disc list-inside">
+                  {character.anime.slice(0, 5).map((anime, index) => (
+                    <li key={index} className="text-sm">
+                      {anime.title} ({anime.role})
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm">No anime appearances found</p>
+              )}
             </TabsContent>
             <TabsContent value="manga">
-              <ul className="list-disc list-inside">
-                {character.manga.slice(0, 5).map((manga, index) => (
-                  <li key={index} className="text-sm">
-                    {manga.title} ({manga.role})
-                  </li>
-                ))}
-              </ul>
+              {character.manga.length > 0 ? (
+                <ul className="list-disc list-inside">
+                  {character.manga.slice(0, 5).map((manga, index) => (
+                    <li key={index} className="text-sm">
+                      {manga.title} ({manga.role})
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm">No manga appearances found</p>
+              )}
             </TabsContent>
             <TabsContent value="voices">
-              <ul className="list-disc list-inside">
-                {character.voices.slice(0, 5).map((voice, index) => (
-                  <li key={index} className="text-sm">
-                    {voice.person.name} ({voice.language})
-                  </li>
-                ))}
-              </ul>
+              {character.voices.length > 0 ? (
+                <ul className="list-disc list-inside">
+                  {character.voices.slice(0, 5).map((voice, index) => (
+                    <li key={index} className="text-sm">
+                      {voice.person.name} ({voice.language})
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm">No voice actor information found</p>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
