@@ -11,7 +11,15 @@ const nextConfig = {
           headers: [
             {
               key: 'Content-Security-Policy',
-              value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://clerk-telemetry.com; connect-src 'self' https://clerk-telemetry.com https://api.jikan.moe; img-src 'self' https://cdn.myanimelist.net data:;"
+              value: `
+                default-src 'self';
+                script-src 'self' 'unsafe-eval' 'unsafe-inline' https://clerk-telemetry.com https://*.clerk.accounts.dev;
+                style-src 'self' 'unsafe-inline';
+                img-src 'self' https://cdn.myanimelist.net data: https://*.clerk.com;
+                font-src 'self';
+                frame-src 'self' https://*.clerk.accounts.dev;
+                connect-src 'self' https://clerk-telemetry.com https://api.jikan.moe https://*.clerk.accounts.dev;
+              `.replace(/\s+/g, ' ').trim()
             },
           ],
         },
