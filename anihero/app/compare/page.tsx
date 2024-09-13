@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import axios from 'axios'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -156,7 +156,7 @@ export default function CharacterComparison() {
               <TabsTrigger value="voices">Voice Actors</TabsTrigger>
             </TabsList>
             <TabsContent value="anime">
-              {character.anime.length > 0 ? (
+              {character.anime && character.anime.length > 0 ? (
                 <ul className="list-disc list-inside">
                   {character.anime.slice(0, 5).map((anime, index) => (
                     <li key={index} className="text-sm">
@@ -169,7 +169,7 @@ export default function CharacterComparison() {
               )}
             </TabsContent>
             <TabsContent value="manga">
-              {character.manga.length > 0 ? (
+              {character.manga && character.manga.length > 0 ? (
                 <ul className="list-disc list-inside">
                   {character.manga.slice(0, 5).map((manga, index) => (
                     <li key={index} className="text-sm">
@@ -182,7 +182,7 @@ export default function CharacterComparison() {
               )}
             </TabsContent>
             <TabsContent value="voices">
-              {character.voices.length > 0 ? (
+              {character.voices && character.voices.length > 0 ? (
                 <ul className="list-disc list-inside">
                   {character.voices.slice(0, 5).map((voice, index) => (
                     <li key={index} className="text-sm">

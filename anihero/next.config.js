@@ -7,15 +7,15 @@ const nextConfig = {
     async headers() {
       return [
         {
-          source: '/(.*)',
+          source: '/:path*',
           headers: [
             {
               key: 'Content-Security-Policy',
-              value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://clerk.anihero.vercel.app https://*.clerk.accounts.dev; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://clerk.anihero.vercel.app https://api.jikan.moe https://*.clerk.accounts.dev;",
+              value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://clerk-telemetry.com; connect-src 'self' https://clerk-telemetry.com https://api.jikan.moe; img-src 'self' https://cdn.myanimelist.net data:;"
             },
           ],
         },
-      ];
+      ]
     },
   };
   
