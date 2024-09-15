@@ -18,7 +18,7 @@ interface Character {
     }
   }
   about: string
-  favorites: number | undefined
+  favorites: number
   anime: {
     title: string
     role: string
@@ -120,8 +120,8 @@ export function CharacterOfTheDay() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle>Character of the Day</CardTitle>
-        <CardDescription>{character.name} ({character.name_kanji})</CardDescription>
+        <CardTitle>{character.name}</CardTitle>
+        <CardDescription>{character.name_kanji}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <img
@@ -148,14 +148,8 @@ export function CharacterOfTheDay() {
         </div>
         <div>
           <h3 className="font-semibold mb-2">Popularity</h3>
-          {character.favorites !== undefined ? (
-            <>
-              <Progress value={character.favorites} max={100000} className="w-full" />
-              <p className="text-sm mt-1">{character.favorites.toLocaleString()} favorites</p>
-            </>
-          ) : (
-            <p className="text-sm">Popularity data not available</p>
-          )}
+          <Progress value={character.favorites} max={100000} className="w-full" />
+          <p className="text-sm mt-1">{character.favorites.toLocaleString()} favorites</p>
         </div>
         {character.anime.length > 0 && (
           <div>
@@ -170,9 +164,6 @@ export function CharacterOfTheDay() {
           </div>
         )}
       </CardContent>
-      <CardFooter>
-        <Button onClick={fetchCharacterOfTheDay}>Get New Character of the Day</Button>
-      </CardFooter>
     </Card>
   )
 }

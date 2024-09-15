@@ -20,7 +20,7 @@ interface Character {
     }
   }
   about: string
-  favorites: number | undefined
+  favorites: number
   anime: {
     title: string
     role: string
@@ -129,14 +129,8 @@ export default function CharacterComparison() {
           </div>
           <div>
             <h3 className="font-semibold mb-2">Popularity</h3>
-            {character.favorites !== undefined ? (
-              <>
-                <Progress value={character.favorites} max={100000} className="w-full" />
-                <p className="text-sm mt-1">{character.favorites.toLocaleString()} favorites</p>
-              </>
-            ) : (
-              <p className="text-sm">Popularity data not available</p>
-            )}
+            <Progress value={character.favorites} max={100000} className="w-full" />
+            <p className="text-sm mt-1">{character.favorites.toLocaleString()} favorites</p>
           </div>
           {character.anime.length > 0 && (
             <div>
