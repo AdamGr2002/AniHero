@@ -6,6 +6,8 @@ import axios from 'axios'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Progress } from "@/components/ui/progress"
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 interface Character {
   mal_id: number
@@ -17,6 +19,7 @@ interface Character {
     }
   }
   about: string
+  favorites: number
   anime: {
     title: string
     role: string
@@ -27,6 +30,7 @@ export function CharacterOfTheDay() {
   const [character, setCharacter] = useState<Character | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [expandedAbout, setExpandedAbout] = useState(false)
 
   const fetchCharacterOfTheDay = async () => {
     setLoading(true)
@@ -43,7 +47,7 @@ export function CharacterOfTheDay() {
 
     try {
       const seed = parseInt(today.replace(/-/g, ''))
-      const randomPage = (seed % 10) + 1 // Generate a consistent random page for the day
+      const randomPage = (seed % 10) + 1
 
       const response = await axios.get('/api/anime', {
         params: {
@@ -62,11 +66,7 @@ export function CharacterOfTheDay() {
       }
     } catch (error) {
       console.error('Failed to fetch character of the day:', error)
-      if (axios.isAxiosError(error) && error.response?.status === 429) {
-        setError("Rate limit exceeded. Please try again in a few moments.")
-      } else {
-        setError("Failed to fetch the character of the day. Please try again.")
-      }
+      setError("Failed to fetch the character of the day. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -75,23 +75,36 @@ export function CharacterOfTheDay() {
   useEffect(() => {
     fetchCharacterOfTheDay()
 
-    // Set up a timer to check for day change
     const timer = setInterval(() => {
       const now = new Date()
       if (now.getHours() === 0 && now.getMinutes() === 0) {
         fetchCharacterOfTheDay()
       }
-    }, 60000) // Check every minute
+    }, 60000)
 
     return () => clearInterval(timer)
   }, [])
+
+  if (loading) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader>
+          <Skeleton className="h-8 w-3/4" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-48 w-full mb-4" />
+          <Skeleton className="h-4 w-full mb-2" />
+          <Skeleton className="h-4 w-3/4" />
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (error) {
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardHeader>
           <CardTitle>Error</CardTitle>
-          <CardDescription>Failed to load character of the day</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-red-500">{error}</p>
@@ -103,51 +116,57 @@ export function CharacterOfTheDay() {
     )
   }
 
+  if (!character) return null
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
         <CardTitle>Character of the Day</CardTitle>
-        <CardDescription>Today's featured character!</CardDescription>
+        <CardDescription>{character.name} ({character.name_kanji})</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {loading || !character ? (
-          <>
-            <Skeleton className="w-full h-64 rounded-lg" />
-            <Skeleton className="w-3/4 h-4" />
-            <Skeleton className="w-1/2 h-4" />
-            <Skeleton className="w-full h-24" />
-          </>
-        ) : (
-          <>
-            <img
-              src={character.images.jpg.image_url}
-              alt={character.name}
-              className="w-full h-64 object-cover rounded-lg"
-            />
-            <h2 className="text-2xl font-bold">{character.name}</h2>
-            {character.name_kanji && (
-              <p className="text-lg text-gray-600">{character.name_kanji}</p>
-            )}
-            <p className="text-sm line-clamp-4">{character.about}</p>
-            {character.anime.length > 0 && (
-              <div>
-                <h3 className="font-semibold">Appears in:</h3>
-                <ul className="list-disc list-inside">
-                  {character.anime.slice(0, 3).map((anime, index) => (
-                    <li key={index}>
-                      {anime.title} ({anime.role})
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </>
+        <img
+          src={character.images.jpg.image_url}
+          alt={character.name}
+          className="w-full h-64 object-cover rounded-lg"
+        />
+        <div>
+          <h3 className="font-semibold mb-2">About</h3>
+          <p className={`text-sm ${expandedAbout ? '' : 'line-clamp-3'}`}>{character.about}</p>
+          {character.about && character.about.length > 150 && (
+            <Button variant="link" onClick={() => setExpandedAbout(!expandedAbout)} className="p-0 h-auto">
+              {expandedAbout ? (
+                <>
+                  Show Less <ChevronUp className="ml-1 h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  Show More <ChevronDown className="ml-1 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+        <div>
+          <h3 className="font-semibold mb-2">Popularity</h3>
+          <Progress value={character.favorites} max={100000} className="w-full" />
+          <p className="text-sm mt-1">{character.favorites.toLocaleString()} favorites</p>
+        </div>
+        {character.anime.length > 0 && (
+          <div>
+            <h3 className="font-semibold mb-2">Appears in:</h3>
+            <ul className="list-disc list-inside">
+              {character.anime.slice(0, 3).map((anime, index) => (
+                <li key={index} className="text-sm">
+                  {anime.title} ({anime.role})
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </CardContent>
       <CardFooter>
-        <Button onClick={fetchCharacterOfTheDay} disabled={loading}>
-          Refresh
-        </Button>
+        <Button onClick={fetchCharacterOfTheDay}>Get New Character of the Day</Button>
       </CardFooter>
     </Card>
   )
