@@ -74,6 +74,7 @@ export function CharacterOfTheDay() {
   useEffect(() => {
     fetchCharacterOfTheDay()
 
+    
     const timer = setInterval(() => {
       const now = new Date()
       if (now.getHours() === 0 && now.getMinutes() === 0) {
@@ -129,29 +130,31 @@ export function CharacterOfTheDay() {
           alt={character.name}
           className="w-full h-64 object-cover rounded-lg"
         />
-        <div>
-          <h3 className="font-semibold mb-2">About</h3>
-          <p className={`text-sm ${expandedAbout ? '' : 'line-clamp-3'}`}>{character.about}</p>
-          {character.about && character.about.length > 150 && (
-            <Button variant="link" onClick={() => setExpandedAbout(!expandedAbout)} className="p-0 h-auto">
-              {expandedAbout ? (
-                <>
-                  Show Less <ChevronUp className="ml-1 h-4 w-4" />
-                </>
-              ) : (
-                <>
-                  Show More <ChevronDown className="ml-1 h-4 w-4" />
-                </>
-              )}
-            </Button>
-          )}
-        </div>
+        {character.about && (
+          <div>
+            <h3 className="font-semibold mb-2">About</h3>
+            <p className={`text-sm ${expandedAbout ? '' : 'line-clamp-3'}`}>{character.about}</p>
+            {character.about.length > 150 && (
+              <Button variant="link" onClick={() => setExpandedAbout(!expandedAbout)} className="p-0 h-auto">
+                {expandedAbout ? (
+                  <>
+                    Show Less <ChevronUp className="ml-1 h-4 w-4" />
+                  </>
+                ) : (
+                  <>
+                    Show More <ChevronDown className="ml-1 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        )}
         <div>
           <h3 className="font-semibold mb-2">Popularity</h3>
           <Progress value={character.favorites} max={100000} className="w-full" />
           <p className="text-sm mt-1">{character.favorites.toLocaleString()} favorites</p>
         </div>
-        {character.anime.length > 0 && (
+        {character.anime && character.anime.length > 0 && (
           <div>
             <h3 className="font-semibold mb-2">Appears in:</h3>
             <ul className="list-disc list-inside">

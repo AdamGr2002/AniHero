@@ -21,7 +21,7 @@ interface Character {
   }
   about: string
   favorites: number
-  anime: {
+  anime?: {
     title: string
     role: string
   }[]
@@ -132,7 +132,8 @@ export default function CharacterComparison() {
             <Progress value={character.favorites} max={100000} className="w-full" />
             <p className="text-sm mt-1">{character.favorites.toLocaleString()} favorites</p>
           </div>
-          {character.anime.length > 0 && (
+          
+          {character.anime && character.anime.length > 0 && (
             <div>
               <h3 className="font-semibold mb-2">Appears in:</h3>
               <ul className="list-disc list-inside">
