@@ -126,6 +126,7 @@ function QuizContent() {
     const currentQuestion = questions[currentQuestionIndex];
     const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
     
+    // Update score and stats
     if (isCorrect) {
       setScore(score + 1);
       setQuizStats(prev => ({
@@ -133,35 +134,24 @@ function QuizContent() {
         correctAnswers: prev.correctAnswers + 1,
         streak: prev.streak + 1,
       }));
-      toast({
-        title: "Correct!",
-        description: `You're on a ${quizStats.streak + 1} question streak!`,
-        duration: 2000,
-      });
     } else {
       setQuizStats(prev => ({
         ...prev,
         incorrectAnswers: prev.incorrectAnswers + 1,
         streak: 0,
       }));
-      toast({
-        title: "Incorrect",
-        description: `The correct answer was: ${currentQuestion.correctAnswer}`,
-        duration: 2000,
-      });
     }
 
     setQuizStats(prev => ({ ...prev, totalQuestions: prev.totalQuestions + 1 }));
 
-    if (currentQuestionIndex < questions.length - 1) {
+    // Check if it's the last question
+    if (currentQuestionIndex === questions.length - 1) {
+      setQuizCompleted(true);
+      // Here you would add logic to save the result, e.g.:
+      // saveQuizResult(score, quizStats);
+    } else {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedAnswer(null);
-    } else {
-      if (questions.length < 50) {
-        loadQuestions();
-      } else {
-        setQuizCompleted(true);
-      }
     }
   };
 
@@ -233,12 +223,13 @@ function QuizContent() {
           <CardDescription>Your final results</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-3xl font-bold text-center mb-4">{score} / {questions.length}</p>
+          <p className="text-3xl font-bold text-center mb-4">{score} / {quizStats.totalQuestions}</p>
           <div className="space-y-2">
             <p>Total Questions: {quizStats.totalQuestions}</p>
             <p>Correct Answers: {quizStats.correctAnswers}</p>
             <p>Incorrect Answers: {quizStats.incorrectAnswers}</p>
             <p>Longest Streak: {quizStats.streak}</p>
+            <p>Accuracy: {((quizStats.correctAnswers / quizStats.totalQuestions) * 100).toFixed(2)}%</p>
           </div>
         </CardContent>
         <CardFooter className="flex justify-between">
