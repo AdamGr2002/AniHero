@@ -10,29 +10,57 @@ import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import Link from 'next/link'
 import { ErrorBoundary } from 'react-error-boundary'
+import { useToast } from "@/hooks/use-toast"
+import { Skeleton } from "@/components/ui/skeleton"
 
-interface Character {
-  mal_id: number
-  name: string
-  images: {
-    jpg: {
-      image_url: string
-    }
-  }
-  anime: {
-    title: string
-  }[]
+interface APIQuestion {
+  category: string;
+  type: string;
+  difficulty: string;
+  question: string;
+  correct_answer: string;
+  incorrect_answers: string[];
 }
 
 interface Question {
-  character: Character
-  type: 'name' | 'anime'
-  options: string[]
-  correctAnswer: string
+  question: string;
+  options: string[];
+  correctAnswer: string;
 }
 
-const QUESTIONS_PER_PAGE = 5
-const CHARACTERS_PER_FETCH = 25
+interface QuizStats {
+  totalQuestions: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  streak: number;
+}
+
+const QUESTIONS_PER_PAGE = 5;
+
+const fetchQuizQuestions = async (amount: number = 5): Promise<Question[]> => {
+  try {
+    const response = await fetch(`/api/quiz?amount=${amount}`);
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error("Rate limit exceeded. Please try again in a few seconds.");
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    if (data && data.results) {
+      return data.results.map((q: APIQuestion) => ({
+        question: q.question,
+        options: [...q.incorrect_answers, q.correct_answer].sort(() => Math.random() - 0.5),
+        correctAnswer: q.correct_answer
+      }));
+    } else {
+      throw new Error("Unexpected response format");
+    }
+  } catch (error) {
+    console.error('Failed to fetch quiz questions:', error);
+    throw error;
+  }
+};
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error, resetErrorBoundary: () => void }) {
   return (
@@ -53,7 +81,6 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error, resetError
 
 function QuizContent() {
   const { isSignedIn, user } = useUser()
-  const [characters, setCharacters] = useState<Character[]>([])
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
@@ -61,130 +88,95 @@ function QuizContent() {
   const [quizCompleted, setQuizCompleted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
+  const [quizStats, setQuizStats] = useState<QuizStats>({
+    totalQuestions: 0,
+    correctAnswers: 0,
+    incorrectAnswers: 0,
+    streak: 0,
+  })
+  const { toast } = useToast()
 
-  const fetchCharacters = async (page: number) => {
+  const loadQuestions = async (retryCount = 0) => {
+    setLoading(true);
+    setError(null);
     try {
-      const response = await axios.get('/api/anime', {
-        params: {
-          page,
-          limit: CHARACTERS_PER_FETCH,
-          order_by: 'favorites',
-          sort: 'desc'
-        }
-      })
-      return response.data.data
+      const newQuestions = await fetchQuizQuestions(QUESTIONS_PER_PAGE);
+      setQuestions(prevQuestions => [...prevQuestions, ...newQuestions]);
     } catch (error) {
-      console.error('Failed to fetch characters:', error)
-      throw new Error("Failed to load characters. Please try again.")
-    }
-  }
-
-  const generateQuestions = (chars: Character[]): Question[] => {
-    const questions: Question[] = []
-    const usedCharacters = new Set()
-
-    while (questions.length < QUESTIONS_PER_PAGE && chars.length > 0) {
-      const randomIndex = Math.floor(Math.random() * chars.length)
-      const character = chars[randomIndex]
-
-      if (!usedCharacters.has(character.mal_id)) {
-        usedCharacters.add(character.mal_id)
-
-        const questionType = Math.random() < 0.5 ? 'name' : 'anime'
-        let options: string[]
-        let correctAnswer: string
-
-        if (questionType === 'name') {
-          correctAnswer = character.name
-          options = [correctAnswer]
-          while (options.length < 4) {
-            const randomChar = chars[Math.floor(Math.random() * chars.length)]
-            if (!options.includes(randomChar.name)) {
-              options.push(randomChar.name)
-            }
-          }
-        } else {
-          correctAnswer = character.anime[0]?.title || 'Unknown Anime'
-          options = [correctAnswer]
-          while (options.length < 4) {
-            const randomChar = chars[Math.floor(Math.random() * chars.length)]
-            const randomAnime = randomChar.anime[0]?.title
-            if (randomAnime && !options.includes(randomAnime)) {
-              options.push(randomAnime)
-            }
-          }
-        }
-
-        options = options.sort(() => Math.random() - 0.5)
-
-        questions.push({
-          character,
-          type: questionType,
-          options,
-          correctAnswer
-        })
+      if (error instanceof Error && error.message.includes("Rate limit exceeded") && retryCount < 3) {
+        // Wait for 5 seconds before retrying
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        return loadQuestions(retryCount + 1);
       }
-
-      chars.splice(randomIndex, 1)
-    }
-
-    return questions
-  }
-
-  const loadQuestions = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const newCharacters = await fetchCharacters(currentPage)
-      setCharacters(prevCharacters => [...prevCharacters, ...newCharacters])
-      const newQuestions = generateQuestions(newCharacters)
-      setQuestions(prevQuestions => [...prevQuestions, ...newQuestions])
-      setCurrentPage(prevPage => prevPage + 1)
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message)
-      } else {
-        setError("An unknown error occurred")
-      }
+      setError(error instanceof Error ? error.message : "An unknown error occurred");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    loadQuestions()
-  }, [])
+    loadQuestions();
+  }, []);
 
   const handleAnswerSelect = (answer: string) => {
     setSelectedAnswer(answer)
   }
 
   const handleNextQuestion = () => {
-    if (selectedAnswer === questions[currentQuestionIndex].correctAnswer) {
-      setScore(score + 1)
+    const currentQuestion = questions[currentQuestionIndex];
+    const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+    
+    if (isCorrect) {
+      setScore(score + 1);
+      setQuizStats(prev => ({
+        ...prev,
+        correctAnswers: prev.correctAnswers + 1,
+        streak: prev.streak + 1,
+      }));
+      toast({
+        title: "Correct!",
+        description: `You're on a ${quizStats.streak + 1} question streak!`,
+        duration: 2000,
+      });
+    } else {
+      setQuizStats(prev => ({
+        ...prev,
+        incorrectAnswers: prev.incorrectAnswers + 1,
+        streak: 0,
+      }));
+      toast({
+        title: "Incorrect",
+        description: `The correct answer was: ${currentQuestion.correctAnswer}`,
+        duration: 2000,
+      });
     }
+
+    setQuizStats(prev => ({ ...prev, totalQuestions: prev.totalQuestions + 1 }));
 
     if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
-      setSelectedAnswer(null)
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setSelectedAnswer(null);
     } else {
-      if (currentQuestionIndex === questions.length - 1 && questions.length < 50) {
-        loadQuestions()
+      if (questions.length < 50) {
+        loadQuestions();
       } else {
-        setQuizCompleted(true)
+        setQuizCompleted(true);
       }
     }
-  }
+  };
 
   const restartQuiz = () => {
-    setCharacters([])
     setQuestions([])
     setCurrentQuestionIndex(0)
     setSelectedAnswer(null)
     setScore(0)
     setQuizCompleted(false)
-    setCurrentPage(1)
+    setQuizStats({
+      totalQuestions: 0,
+      correctAnswers: 0,
+      incorrectAnswers: 0,
+      streak: 0,
+    })
     loadQuestions()
   }
 
@@ -213,7 +205,7 @@ function QuizContent() {
           <p className="text-red-500 mb-4">{error}</p>
         </CardContent>
         <CardFooter>
-          <Button onClick={loadQuestions}>Try Again</Button>
+          <Button onClick={() => loadQuestions()}>Try Again</Button>
         </CardFooter>
       </Card>
     )
@@ -227,7 +219,7 @@ function QuizContent() {
           <CardDescription>Please try again later</CardDescription>
         </CardHeader>
         <CardFooter>
-          <Button onClick={loadQuestions}>Reload Quiz</Button>
+          <Button onClick={() => loadQuestions()}>Reload Quiz</Button>
         </CardFooter>
       </Card>
     )
@@ -238,10 +230,16 @@ function QuizContent() {
       <Card className="w-full max-w-md mx-auto">
         <CardHeader>
           <CardTitle>Quiz Completed!</CardTitle>
-          <CardDescription>Your final score</CardDescription>
+          <CardDescription>Your final results</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-3xl font-bold text-center">{score} / {questions.length}</p>
+          <p className="text-3xl font-bold text-center mb-4">{score} / {questions.length}</p>
+          <div className="space-y-2">
+            <p>Total Questions: {quizStats.totalQuestions}</p>
+            <p>Correct Answers: {quizStats.correctAnswers}</p>
+            <p>Incorrect Answers: {quizStats.incorrectAnswers}</p>
+            <p>Longest Streak: {quizStats.streak}</p>
+          </div>
         </CardContent>
         <CardFooter className="flex justify-between">
           <Button onClick={restartQuiz}>Restart Quiz</Button>
@@ -258,40 +256,30 @@ function QuizContent() {
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Anime Character Quiz</CardTitle>
+        <CardTitle>Anime & Manga Quiz</CardTitle>
         <CardDescription>
           Question {currentQuestionIndex + 1} of {questions.length}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col md:flex-row items-center mb-4">
-          <img
-            src={currentQuestion.character.images.jpg.image_url}
-            alt="Character"
-            className="w-32 h-32 object-cover rounded-full mb-4 md:mb-0 md:mr-4"
-          />
-          <div>
-            <h3 className="text-lg font-semibold mb-2">
-              {currentQuestion.type === 'name'
-                ? "What's this character's name?"
-                : "Which anime is this character from?"}
-            </h3>
-            <RadioGroup onValueChange={handleAnswerSelect} value={selectedAnswer || undefined}>
-              {currentQuestion.options.map((option, index) => (
-                <div key={index} className="flex items-center space-x-2 mb-2">
-                  <RadioGroupItem value={option} id={`option-${index}`} />
-                  <Label htmlFor={`option-${index}`}>{option}</Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </div>
-        </div>
+        <h3 className="text-lg font-semibold mb-4" dangerouslySetInnerHTML={{ __html: currentQuestion.question }} />
+        <RadioGroup onValueChange={handleAnswerSelect} value={selectedAnswer || undefined}>
+          {currentQuestion.options.map((option, index) => (
+            <div key={index} className="flex items-center space-x-2 mb-2">
+              <RadioGroupItem value={option} id={`option-${index}`} />
+              <Label htmlFor={`option-${index}`} dangerouslySetInnerHTML={{ __html: option }} />
+            </div>
+          ))}
+        </RadioGroup>
       </CardContent>
       <CardFooter className="flex flex-col items-stretch">
         <Button onClick={handleNextQuestion} disabled={!selectedAnswer} className="mb-4">
           {currentQuestionIndex < questions.length - 1 ? 'Next Question' : 'Finish Quiz'}
         </Button>
         <Progress value={(currentQuestionIndex + 1) / questions.length * 100} className="w-full" />
+        <div className="mt-4 text-sm text-gray-500">
+          Current Score: {score} | Streak: {quizStats.streak}
+        </div>
       </CardFooter>
     </Card>
   )
